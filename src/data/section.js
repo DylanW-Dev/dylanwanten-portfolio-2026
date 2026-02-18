@@ -85,11 +85,16 @@ export const certificates = [
         image: "/certificate-placeholder.png",
         link: "#",
     },
+    {
+        title: "Version Control",
+        issuer: "Coursera / Meta",
+        image: "/certificate-placeholder.png",
+        link: "#",
+    },
 ];
 
 export const socials = [
     { label: "LinkedIn", href: "#", icon: "in" },
     { label: "GitHub", href: "#", icon: "gh" },
-    { label: "Portfolio", href: "#", icon: "↗" },
-    { label: "Email", href: "mailto:your.email@example.com", icon: "@" },
+    { label: "Projects", href: "#", icon: "↗" },
 ];

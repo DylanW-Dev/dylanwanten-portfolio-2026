@@ -226,7 +226,7 @@ export default function CVPanel({ isFlipped, childrenFront, childrenBack, disabl
                 <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: holoStyle.sweep, opacity: 0.70 }} />
                 <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: holoStyle.shine, opacity: 0.65 }} />
 
-                <div style={{ position: "relative", height: "100%", padding: 44 }}>
+                <div style={{ position: "relative", height: "100%", padding: 44, overflowY: "auto", boxSizing: "border-box" }}>
                     {childrenFront}
                 </div>
             </div>
@@ -244,7 +244,7 @@ export default function CVPanel({ isFlipped, childrenFront, childrenBack, disabl
                 }}
             >
                 <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: holoStyle.radial, opacity: 0.70 }} />
-                <div style={{ position: "relative", height: "100%", padding: 44 }}>
+                <div style={{ position: "relative", height: "100%", padding: 44, overflowY: "auto", boxSizing: "border-box" }}>
                     {childrenBack}
                 </div>
             </div>

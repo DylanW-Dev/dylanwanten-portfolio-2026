@@ -27,12 +27,10 @@ export default function CartButton({ onClick }) {
                 color: "rgba(255,255,255,0.92)",
             }}
         >
-            {/* cart glyph */}
+            {/* mail glyph */}
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M6 6h15l-1.5 9h-12z" />
-                <path d="M6 6l-2-2H2" />
-                <circle cx="9" cy="20" r="1.5" />
-                <circle cx="18" cy="20" r="1.5" />
+                <rect x="2" y="4" width="20" height="16" rx="2" />
+                <path d="M2 7l10 7 10-7" />
             </svg>
 
             {selectedSkills.length > 0 && (

@@ -5,7 +5,7 @@ export default function CertificateModal({ certificate, onClose }) {
     const frameRef = useRef(null);
     const [tilt, setTilt] = useState({ rx: 0, ry: 0, hx: 0, hy: 0, i: 0 });
 
-    // Lock scroll + (optionally) disable background selection
+    // Lock scroll
     useEffect(() => {
         const prevOverflow = document.body.style.overflow;
         document.body.style.overflow = "hidden";
@@ -13,6 +13,13 @@ export default function CertificateModal({ certificate, onClose }) {
             document.body.style.overflow = prevOverflow;
         };
     }, []);
+
+    // Close on Escape
+    useEffect(() => {
+        const onKey = (e) => { if (e.key === "Escape") onClose?.(); };
+        document.addEventListener("keydown", onKey);
+        return () => document.removeEventListener("keydown", onKey);
+    }, [onClose]);
 
     const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 
@@ -68,10 +75,11 @@ export default function CertificateModal({ certificate, onClose }) {
                     zIndex: 2147483647, // max safe
                     background: "rgba(2,6,23,0.62)",
                     backdropFilter: "blur(16px)",
-                    display: "grid",
-                    placeItems: "center",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
                     padding: 18,
-                    // isolate stacking contexts and prevent weird blending issues
+                    overflowY: "auto",
                     isolation: "isolate",
                 }}
             >
@@ -80,12 +88,18 @@ export default function CertificateModal({ certificate, onClose }) {
                     onPointerDown={(e) => e.stopPropagation()}
                     style={{
                         width: "min(820px, 96vw)",
+                        maxHeight: "92vh",
+                        overflow: "hidden",
+                        overflowY: "auto",
                         borderRadius: 20,
                         position: "relative",
                         background: "rgba(255,255,255,0.94)",
                         boxShadow: "var(--shadowHeavy)",
-                        overflow: "hidden",
+                        flexShrink: 0,
                     }}
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="cert-modal-title"
                 >
                     {/* TOP BAR (NOT TILTING) — always clickable */}
                     <div
@@ -113,6 +127,7 @@ export default function CertificateModal({ certificate, onClose }) {
                                 Certificate
                             </div>
                             <div
+                                id="cert-modal-title"
                                 style={{
                                     marginTop: 6,
                                     fontSize: 18,
@@ -214,7 +229,7 @@ export default function CertificateModal({ certificate, onClose }) {
                                 {/* image area */}
                                 <div
                                     style={{
-                                        height: 520,
+                                        height: "min(520px, 45vh)",
                                         display: "grid",
                                         placeItems: "center",
                                         background: "rgba(15,23,42,0.02)",

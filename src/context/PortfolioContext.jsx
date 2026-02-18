@@ -9,7 +9,7 @@ export function usePortfolio() {
 }
 
 export default function PortfolioProvider({ children }) {
-    const [mode, setMode] = useState("developer"); // 'developer' | 'recruiter'
+    const [mode, setMode] = useState("recruiter"); // 'developer' | 'recruiter'
     const [selectedSkills, setSelectedSkills] = useState([]);
     const [isFlipped, setIsFlipped] = useState(false);
 

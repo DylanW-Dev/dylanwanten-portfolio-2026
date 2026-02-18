@@ -1,4 +1,9 @@
+import { useEffect, useState } from "react";
 import useDraggable from "../hooks/useDraggable";
+
+function getCardWidth() {
+    return Math.min(440, window.innerWidth - 24);
+}
 
 export default function FloatingCard({
     title,
@@ -8,7 +13,15 @@ export default function FloatingCard({
     children,
     disabled = false,
 }) {
-    const size = { w: 440, h: 360 };
+    const [cardW, setCardW] = useState(getCardWidth);
+
+    useEffect(() => {
+        const onResize = () => setCardW(getCardWidth());
+        window.addEventListener("resize", onResize);
+        return () => window.removeEventListener("resize", onResize);
+    }, []);
+
+    const size = { w: cardW, h: 380 };
 
     const { pos, bind } = useDraggable({
         initial,
@@ -20,6 +33,8 @@ export default function FloatingCard({
     return (
         <div
             className="anim-popIn"
+            role="region"
+            aria-label={title}
             style={{
                 position: "fixed",
                 left: pos?.x ?? 12,
@@ -29,12 +44,10 @@ export default function FloatingCard({
                 zIndex: 65,
                 background: "var(--card)",
                 border: "1px solid var(--cardBorder)",
-                borderRadius: 18,
+                borderRadius: 22,
                 boxShadow: "var(--shadowCard)",
                 backdropFilter: "blur(14px)",
                 overflow: "hidden",
-
-                // ✅ if disabled, don't let this card steal pointer streams
                 pointerEvents: disabled ? "none" : "auto",
             }}
         >
@@ -42,7 +55,7 @@ export default function FloatingCard({
             <div
                 {...bind}
                 style={{
-                    padding: "14px 14px",
+                padding: "18px 20px",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
@@ -58,6 +71,7 @@ export default function FloatingCard({
                         letterSpacing: "0.08em",
                         textTransform: "uppercase",
                         color: "rgba(199,210,254,0.95)",
+                        fontWeight: 600,
                     }}
                 >
                     {title}
@@ -65,39 +79,43 @@ export default function FloatingCard({
 
                 <button
                     type="button"
-                    // pointerdown is more reliable than click when pointer capture exists elsewhere
                     onPointerDown={(e) => {
                         e.stopPropagation();
                         onClose?.();
                     }}
                     aria-label="Close"
                     style={{
-                        width: 34,
-                        height: 34,
+                        width: 36,
+                        height: 36,
                         borderRadius: 12,
                         border: "1px solid rgba(255,255,255,0.12)",
                         background: "rgba(2,6,23,0.35)",
                         color: "rgba(255,255,255,0.9)",
                         cursor: "pointer",
                         fontSize: 18,
-
-                        // If parent pointerEvents is none, this won't fire anyway.
+                        display: "grid",
+                        placeItems: "center",
+                        flexShrink: 0,
                     }}
                 >
                     ×
                 </button>
             </div>
 
-            <div style={{ padding: 14, maxHeight: 300, overflow: "auto" }}>{children}</div>
+            {/* CONTENT */}
+            <div style={{ padding: "20px 22px", maxHeight: 340, overflowY: "auto" }}>
+                {children}
+            </div>
 
+            {/* FOOTER HINT */}
             <div
                 style={{
-                    padding: "0 14px 14px",
+                    padding: "0 22px 18px",
                     fontSize: 11,
-                    color: "rgba(148,163,184,0.85)",
+                    color: "rgba(148,163,184,0.55)",
                 }}
             >
-                Drag from header • Click inside normally
+                Drag from header · Click inside normally
             </div>
         </div>
     );

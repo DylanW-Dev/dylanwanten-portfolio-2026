@@ -3,12 +3,10 @@ import { sections, certificates } from "../data/section";
 import { usePortfolio } from "../context/PortfolioContext";
 
 import ModeToggle from "./ModeToggle";
-import RecruiterPanel from "./RecruiterPanel";
 import CVPanel from "./CVPanel";
 import FloatingCard from "./FloatingCard";
 import ArrowLayer from "./ArrowLayer";
 import CertificateModal from "./CertificateModal";
-import CartButton from "./CartButton";
 import CheckoutModal from "./CheckoutModal";
 import SocialNav from "./SocialNav";
 
@@ -52,38 +50,37 @@ export default function PortfolioLayout() {
 
     const placeCard = (key, index) => {
         const el = rowRefs.current[key];
-        const w = 440;
-        const h = 360;
-        const gap = 26;
+        const w = Math.min(440, window.innerWidth - 24);
+        const h = 380;
 
-        // alternate sides: even -> right, odd -> left
+        // On mobile: stack cards centered at the top
+        if (window.innerWidth < 640) {
+            const x = Math.max(0, Math.floor((window.innerWidth - w) / 2));
+            const y = Math.max(80, 80 + index * (h + 12));
+            return { x, y, w, h };
+        }
+
+        // Desktop: alternate left / right of the CV
+        const gap = 26;
         const preferRight = index % 2 === 0;
 
-        // baseline Y from row if available
         let baseY = 170;
         if (el) {
             const r = el.getBoundingClientRect();
             baseY = r.top - 40;
         }
 
-        // stack spacing to prevent overlap (even right stack, odd left stack)
         const stackSlot = Math.floor(index / 2);
         const stackedY = baseY + stackSlot * (h + 18);
-
         const y = Math.max(12, Math.min(stackedY, window.innerHeight - h - 12));
 
-        // choose X side, clamp to viewport
         const cvCenterX = window.innerWidth / 2;
-
         let xRight = Math.min(window.innerWidth - w - 12, cvCenterX + 330);
         let xLeft = Math.max(12, cvCenterX - 330 - w);
 
-        // keep a tiny gap from CV area if needed
-        // (gap variable is here if you want to use it later)
         void gap;
 
         const x = preferRight ? xRight : xLeft;
-
         return { x, y, w, h };
     };
 
@@ -116,19 +113,19 @@ export default function PortfolioLayout() {
                 display: "grid",
                 placeItems: "center",
                 padding: 24,
+                paddingTop: 90,
                 perspective: "1500px",
             }}
         >
             <ModeToggle />
-            <RecruiterPanel />
-            <SocialNav visible={isRecruiter} />
+            <SocialNav visible={isRecruiter} onMailClick={() => setCheckoutOpen(true)} selectedSkillsCount={selectedSkills.length} />
 
             {/* Flip button */}
             <button
                 onClick={() => setIsFlipped((f) => !f)}
                 style={{
                     position: "fixed",
-                    bottom: 18,
+                    bottom: 10,
                     left: "50%",
                     transform: "translateX(-50%)",
                     zIndex: 160,
@@ -142,15 +139,13 @@ export default function PortfolioLayout() {
                     boxShadow: "0 18px 60px rgba(0,0,0,0.35)",
                     display: "flex",
                     alignItems: "center",
-                    gap: 10,
+                    gap: 8,
+                    whiteSpace: "nowrap",
                 }}
             >
                 <span style={{ opacity: 0.9 }}>{isFlipped ? "Show CV" : "Flip page"}</span>
                 <span style={{ color: "rgba(199,210,254,0.95)" }}>↻</span>
             </button>
-
-            {/* Cart button (recruiter only) */}
-            <CartButton onClick={() => setCheckoutOpen(true)} />
 
             {/* CV Panel */}
             <CVPanel
@@ -158,8 +153,8 @@ export default function PortfolioLayout() {
                 disabled={modalOpen}   // ✅ critical fix
                 childrenFront={
                     <div>
-                        <div style={{ borderBottom: "1px solid rgba(15,23,42,0.10)", paddingBottom: 14, marginBottom: 18 }}>
-                            <div style={{ fontSize: 28, fontWeight: 800, color: "var(--ink)", letterSpacing: "-0.02em" }}>
+                        <div style={{ borderBottom: "1px solid rgba(15,23,42,0.10)", paddingBottom: 18, marginBottom: 22 }}>
+                            <div style={{ fontSize: 30, fontWeight: 800, color: "var(--ink)", letterSpacing: "-0.02em" }}>
                                 Your Name
                             </div>
                             <div style={{ marginTop: 6, color: "var(--muted)", fontSize: 14 }}>
@@ -170,7 +165,7 @@ export default function PortfolioLayout() {
                             </div>
                         </div>
 
-                        <div style={{ display: "grid", gap: 10 }}>
+                        <div style={{ display: "grid", gap: 14 }}>
                             {sectionEntries.map(([key, s]) => {
                                 const active = openKeys.includes(key);
 
@@ -183,12 +178,12 @@ export default function PortfolioLayout() {
                                         style={{
                                             textAlign: "left",
                                             width: "100%",
-                                            borderRadius: 14,
+                                            borderRadius: 16,
                                             border: "1px solid rgba(15,23,42,0.10)",
                                             background: active
                                                 ? "linear-gradient(135deg, rgba(99,102,241,0.12), rgba(167,139,250,0.08))"
                                                 : "rgba(255,255,255,0.78)",
-                                            padding: "14px 14px",
+                                            padding: "20px 18px",
                                             cursor: "pointer",
                                             boxShadow: active ? "0 10px 30px rgba(99,102,241,0.12)" : "none",
                                         }}
@@ -196,7 +191,7 @@ export default function PortfolioLayout() {
                                     >
                                         <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
                                             <div>
-                                                <div style={{ color: "var(--ink)", fontWeight: 750, fontSize: 14 }}>
+                                                <div style={{ color: "var(--ink)", fontWeight: 750, fontSize: 15 }}>
                                                     {s.label}
                                                     {isRecruiter && key === "skills" ? (
                                                         <span style={{ marginLeft: 10, fontSize: 11, color: "rgba(99,102,241,0.9)" }}>
@@ -204,7 +199,7 @@ export default function PortfolioLayout() {
                                                         </span>
                                                     ) : null}
                                                 </div>
-                                                <div style={{ marginTop: 4, fontSize: 12.5, color: "rgba(15,23,42,0.55)" }}>{s.sub}</div>
+                                                <div style={{ marginTop: 5, fontSize: 13, color: "rgba(15,23,42,0.55)" }}>{s.sub}</div>
                                             </div>
 
                                             <div style={{ color: active ? "rgba(99,102,241,0.95)" : "rgba(15,23,42,0.35)", fontSize: 16 }}>
@@ -218,7 +213,7 @@ export default function PortfolioLayout() {
 
                         {isRecruiter ? (
                             <div style={{ marginTop: 18, fontSize: 12.5, color: "rgba(15,23,42,0.55)" }}>
-                                Recruiter Mode: select skills in the Skills card → use cart to email.
+                                Recruiter Mode: select skills in the Skills card → use the mail icon to contact.
                                 {selectedSkills.length > 0 ? (
                                     <span style={{ marginLeft: 10, color: "rgba(99,102,241,0.95)", fontWeight: 800 }}>
                                         Selected: {selectedSkills.length}
@@ -230,14 +225,14 @@ export default function PortfolioLayout() {
                 }
                 childrenBack={
                     <div>
-                        <div style={{ borderBottom: "1px solid rgba(15,23,42,0.10)", paddingBottom: 14, marginBottom: 18 }}>
+                        <div style={{ borderBottom: "1px solid rgba(15,23,42,0.10)", paddingBottom: 18, marginBottom: 22 }}>
                             <div style={{ fontSize: 20, fontWeight: 800, color: "var(--ink)" }}>Certificates</div>
                             <div style={{ marginTop: 6, color: "rgba(15,23,42,0.55)", fontSize: 13.5 }}>
                                 Click to preview in holographic frame.
                             </div>
                         </div>
 
-                        <div style={{ display: "grid", gap: 10 }}>
+                        <div style={{ display: "grid", gap: 12 }}>
                             {certificates.map((c) => (
                                 <button
                                     key={c.title}
@@ -246,10 +241,10 @@ export default function PortfolioLayout() {
                                     style={{
                                         textAlign: "left",
                                         width: "100%",
-                                        borderRadius: 14,
+                                        borderRadius: 16,
                                         border: "1px solid rgba(15,23,42,0.10)",
                                         background: "rgba(255,255,255,0.78)",
-                                        padding: "14px 14px",
+                                        padding: "18px 16px",
                                         cursor: "pointer",
                                     }}
                                 >
@@ -289,7 +284,7 @@ export default function PortfolioLayout() {
                         {key === "skills" ? (
                             <div>
                                 <div style={{ fontSize: 12.5, color: "rgba(148,163,184,0.92)", marginBottom: 10 }}>
-                                    {isRecruiter ? "Click to add/remove skills → then use the cart." : "Skills overview."}
+                                    {isRecruiter ? "Click to add/remove skills → then use the mail icon to contact." : "Skills overview."}
                                 </div>
 
                                 <div style={{ fontSize: 12, letterSpacing: "0.10em", textTransform: "uppercase", color: "rgba(199,210,254,0.95)", marginBottom: 8 }}>
@@ -355,9 +350,9 @@ export default function PortfolioLayout() {
                                 </div>
                             </div>
                         ) : key === "education" ? (
-                            <div style={{ display: "grid", gap: 10 }}>
+                            <div style={{ display: "grid", gap: 12 }}>
                                 {s.content.items.map((it) => (
-                                    <div key={it.title} style={{ padding: 10, borderRadius: 12, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                                    <div key={it.title} style={{ padding: "12px 14px", borderRadius: 14, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}>
                                         <div style={{ fontWeight: 800 }}>{it.title}</div>
                                         <div style={{ color: "rgba(148,163,184,0.92)", marginTop: 4, fontSize: 12.5 }}>{it.meta}</div>
                                     </div>
@@ -366,7 +361,7 @@ export default function PortfolioLayout() {
                         ) : (
                             <div style={{ display: "grid", gap: 12 }}>
                                 {s.content.items.map((it) => (
-                                    <div key={it.title} style={{ padding: 10, borderRadius: 12, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                                    <div key={it.title} style={{ padding: "12px 14px", borderRadius: 14, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}>
                                         <div style={{ fontWeight: 800 }}>{it.title}</div>
                                         <div style={{ color: "rgba(148,163,184,0.92)", marginTop: 4, fontSize: 12.5 }}>{it.meta}</div>
                                         <ul style={{ marginTop: 10, paddingLeft: 18, color: "rgba(226,232,240,0.88)" }}>
