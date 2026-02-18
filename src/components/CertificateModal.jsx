@@ -1,226 +1,246 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import ModalPortal from "./ModalPortal";
 
 export default function CertificateModal({ certificate, onClose }) {
     const frameRef = useRef(null);
+    const [tilt, setTilt] = useState({ rx: 0, ry: 0, hx: 0, hy: 0, i: 0 });
 
-    const [rot, setRot] = useState({ rx: 0, ry: 0 });
-    const rotRef = useRef({ rx: 0, ry: 0 });
-    const velRef = useRef({ vx: 0, vy: 0 });
-    const draggingRef = useRef(false);
-    const pendingRef = useRef(false);
-    const pointerIdRef = useRef(null);
-    const startRef = useRef({ x: 0, y: 0, rx: 0, ry: 0 });
-
-    const [holo, setHolo] = useState({ x: 0, y: 0, intensity: 0 });
-    const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
-    const DRAG_THRESHOLD = 6;
-
+    // Lock scroll + (optionally) disable background selection
     useEffect(() => {
-        let raf = 0;
-        const tick = () => {
-            if (draggingRef.current) {
-                raf = requestAnimationFrame(tick);
-                return;
-            }
-            const k = 0.14, c = 0.80;
-
-            let { rx, ry } = rotRef.current;
-            let { vx, vy } = velRef.current;
-
-            vx = (vx + (-k * rx)) * c;
-            vy = (vy + (-k * ry)) * c;
-
-            rx += vx;
-            ry += vy;
-
-            if (Math.abs(rx) < 0.02 && Math.abs(ry) < 0.02 && Math.abs(vx) < 0.02 && Math.abs(vy) < 0.02) {
-                rx = 0; ry = 0; vx = 0; vy = 0;
-            }
-
-            rotRef.current = { rx, ry };
-            velRef.current = { vx, vy };
-            setRot({ rx, ry });
-
-            raf = requestAnimationFrame(tick);
+        const prevOverflow = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+        return () => {
+            document.body.style.overflow = prevOverflow;
         };
-
-        raf = requestAnimationFrame(tick);
-        return () => cancelAnimationFrame(raf);
     }, []);
 
-    const isInteractiveTarget = (target) => {
-        if (!(target instanceof HTMLElement)) return false;
-        return !!target.closest("button,a,input,textarea,select,[role='button']");
+    const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+
+    const onMove = (e) => {
+        const el = frameRef.current;
+        if (!el) return;
+
+        const r = el.getBoundingClientRect();
+        const x = e.clientX;
+        const y = e.clientY;
+
+        const inside = x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+        if (!inside) return;
+
+        const px = (x - r.left) / r.width;   // 0..1
+        const py = (y - r.top) / r.height;  // 0..1
+
+        const ry = clamp((px - 0.5) * 18, -10, 10);
+        const rx = clamp(-(py - 0.5) * 14, -8, 8);
+
+        const i = clamp((Math.abs(rx) + Math.abs(ry)) / 16, 0, 1);
+
+        setTilt({
+            rx,
+            ry,
+            hx: x - r.left,
+            hy: y - r.top,
+            i,
+        });
     };
 
-    const onPointerDown = (e) => {
-        if (isInteractiveTarget(e.target)) return;
-
-        pendingRef.current = true;
-        draggingRef.current = false;
-        pointerIdRef.current = e.pointerId;
-
-        startRef.current = { x: e.clientX, y: e.clientY, rx: rotRef.current.rx, ry: rotRef.current.ry };
+    const reset = () => {
+        setTilt((p) => ({ ...p, rx: 0, ry: 0, i: 0 }));
     };
 
-    const onPointerMove = (e) => {
-        if (pointerIdRef.current !== e.pointerId) return;
-        if (!pendingRef.current && !draggingRef.current) return;
-
-        const dx = e.clientX - startRef.current.x;
-        const dy = e.clientY - startRef.current.y;
-
-        if (pendingRef.current && !draggingRef.current) {
-            if (Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
-            pendingRef.current = false;
-            draggingRef.current = true;
-            frameRef.current?.setPointerCapture(e.pointerId);
-        }
-
-        if (!draggingRef.current) return;
-
-        const ry = clamp(startRef.current.ry + dx * 0.09, -12, 12);
-        const rx = clamp(startRef.current.rx - dy * 0.08, -10, 10);
-
-        rotRef.current = { rx, ry };
-        setRot({ rx, ry });
-
-        const rect = frameRef.current?.getBoundingClientRect();
-        if (rect) {
-            const hx = e.clientX - rect.left;
-            const hy = e.clientY - rect.top;
-            const intensity = clamp((Math.abs(rx) + Math.abs(ry)) / 16, 0, 1);
-            setHolo({ x: hx, y: hy, intensity });
-        }
-    };
-
-    const endPointer = () => {
-        pendingRef.current = false;
-        draggingRef.current = false;
-        pointerIdRef.current = null;
-    };
-
-    const holoStyle = useMemo(() => {
-        const i = holo.intensity;
+    const holo = useMemo(() => {
+        const i = tilt.i;
         return {
-            radial: `radial-gradient(circle 520px at ${holo.x}px ${holo.y}px, rgba(99,102,241,${0.12 + i * 0.22}), transparent 60%)`,
-            sweep: `linear-gradient(120deg, transparent 25%, rgba(167,139,250,${0.10 + i * 0.22}) 52%, transparent 80%)`,
-            shine: `linear-gradient(to right, transparent 0%, rgba(255,255,255,${0.14 + i * 0.25}) ${50 + rot.ry * 3}%, transparent 100%)`,
+            radial: `radial-gradient(circle 560px at ${tilt.hx}px ${tilt.hy}px, rgba(99,102,241,${0.10 + i * 0.26}), transparent 62%)`,
+            sweep: `linear-gradient(120deg, transparent 25%, rgba(167,139,250,${0.08 + i * 0.24}) 52%, transparent 82%)`,
+            shine: `linear-gradient(to right, transparent 0%, rgba(255,255,255,${0.10 + i * 0.30}) ${55 + tilt.ry * 3}%, transparent 100%)`,
         };
-    }, [holo.x, holo.y, holo.intensity, rot.ry]);
+    }, [tilt.hx, tilt.hy, tilt.i, tilt.ry]);
 
     return (
-        <div
-            onClick={onClose}
-            style={{
-                position: "fixed",
-                inset: 0,
-                zIndex: 140,
-                background: "rgba(2,6,23,0.55)",
-                backdropFilter: "blur(14px)",
-                display: "grid",
-                placeItems: "center",
-                padding: 18,
-            }}
-        >
+        <ModalPortal>
             <div
-                ref={frameRef}
-                className="anim-popIn"
-                onClick={(e) => e.stopPropagation()}
-                onPointerDown={onPointerDown}
-                onPointerMove={onPointerMove}
-                onPointerUp={endPointer}
-                onPointerCancel={endPointer}
+                // Backdrop: click anywhere outside closes
+                onPointerDown={onClose}
                 style={{
-                    width: "min(720px, 92vw)",
-                    borderRadius: 16,
-                    background: "#ffffff",
-                    boxShadow: "var(--shadowHeavy)",
-                    transform: `rotateX(${rot.rx}deg) rotateY(${rot.ry}deg)`,
-                    transformStyle: "preserve-3d",
-                    transition: draggingRef.current ? "none" : "transform 160ms ease-out",
-                    position: "relative",
-                    overflow: "hidden",
-                    cursor: draggingRef.current ? "grabbing" : "grab",
-                    userSelect: "none",
+                    position: "fixed",
+                    inset: 0,
+                    zIndex: 2147483647, // max safe
+                    background: "rgba(2,6,23,0.62)",
+                    backdropFilter: "blur(16px)",
+                    display: "grid",
+                    placeItems: "center",
+                    padding: 18,
+                    // isolate stacking contexts and prevent weird blending issues
+                    isolation: "isolate",
                 }}
             >
-                <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: holoStyle.radial }} />
-                <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: holoStyle.sweep, opacity: 0.75 }} />
-                <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: holoStyle.shine, opacity: 0.65 }} />
-
-                <button
-                    type="button"
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        onClose?.();
-                    }}
-                    aria-label="Close"
+                <div
+                    // Prevent backdrop close when interacting inside
+                    onPointerDown={(e) => e.stopPropagation()}
                     style={{
-                        position: "absolute",
-                        top: 14,
-                        right: 14,
-                        width: 40,
-                        height: 40,
-                        borderRadius: 14,
-                        border: "1px solid rgba(15,23,42,0.10)",
-                        background: "rgba(255,255,255,0.82)",
-                        cursor: "pointer",
-                        fontSize: 18,
-                        zIndex: 2,
+                        width: "min(820px, 96vw)",
+                        borderRadius: 20,
+                        position: "relative",
+                        background: "rgba(255,255,255,0.94)",
+                        boxShadow: "var(--shadowHeavy)",
+                        overflow: "hidden",
                     }}
                 >
-                    ×
-                </button>
-
-                <div style={{ position: "relative", zIndex: 1, padding: 26 }}>
-                    <div style={{ fontSize: 12, letterSpacing: "0.10em", textTransform: "uppercase", color: "rgba(15,23,42,0.55)" }}>
-                        Certificate
-                    </div>
-                    <div style={{ marginTop: 6, fontSize: 22, fontWeight: 700, color: "var(--ink)" }}>
-                        {certificate.title}
-                    </div>
-                    <div style={{ marginTop: 6, fontSize: 13.5, color: "rgba(15,23,42,0.55)" }}>
-                        {certificate.issuer}
-                    </div>
-
+                    {/* TOP BAR (NOT TILTING) — always clickable */}
                     <div
                         style={{
-                            marginTop: 18,
-                            height: 340,
-                            borderRadius: 12,
-                            background: "linear-gradient(135deg, rgba(2,6,23,0.08), rgba(99,102,241,0.10))",
-                            border: "1px dashed rgba(15,23,42,0.25)",
-                            display: "grid",
-                            placeItems: "center",
-                            color: "rgba(15,23,42,0.55)",
-                            fontSize: 13,
+                            position: "relative",
+                            zIndex: 10,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            gap: 10,
+                            padding: "14px 14px 12px",
+                            borderBottom: "1px solid rgba(15,23,42,0.10)",
+                            background: "rgba(255,255,255,0.95)",
                         }}
                     >
-                        <img src={certificate.image} alt={`${certificate.title} credential`} style={{ maxWidth: "90%", maxHeight: "90%", objectFit: "contain" }} />
+                        <div style={{ minWidth: 0 }}>
+                            <div
+                                style={{
+                                    fontSize: 11,
+                                    letterSpacing: "0.12em",
+                                    textTransform: "uppercase",
+                                    color: "rgba(15,23,42,0.55)",
+                                }}
+                            >
+                                Certificate
+                            </div>
+                            <div
+                                style={{
+                                    marginTop: 6,
+                                    fontSize: 18,
+                                    fontWeight: 850,
+                                    color: "var(--ink)",
+                                    whiteSpace: "nowrap",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                }}
+                            >
+                                {certificate.title}
+                            </div>
+                            <div style={{ marginTop: 4, fontSize: 13, color: "rgba(15,23,42,0.55)" }}>
+                                {certificate.issuer}
+                            </div>
+                        </div>
+
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+                            <a
+                                href={certificate.link}
+                                target="_blank"
+                                rel="noreferrer"
+                                // pointerdown so it works even if something else messes with click
+                                onPointerDown={(e) => e.stopPropagation()}
+                                style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 8,
+                                    padding: "10px 12px",
+                                    borderRadius: 12,
+                                    background: "rgba(99,102,241,0.12)",
+                                    border: "1px solid rgba(99,102,241,0.25)",
+                                    color: "rgba(15,23,42,0.86)",
+                                    textDecoration: "none",
+                                    fontSize: 13,
+                                    fontWeight: 800,
+                                    cursor: "pointer",
+                                }}
+                            >
+                                View credential →
+                            </a>
+
+                            <button
+                                type="button"
+                                aria-label="Close"
+                                onPointerDown={(e) => {
+                                    e.stopPropagation();
+                                    onClose?.();
+                                }}
+                                style={{
+                                    width: 40,
+                                    height: 40,
+                                    borderRadius: 14,
+                                    border: "1px solid rgba(15,23,42,0.10)",
+                                    background: "rgba(255,255,255,0.92)",
+                                    cursor: "pointer",
+                                    fontSize: 18,
+                                }}
+                            >
+                                ×
+                            </button>
+                        </div>
                     </div>
 
-                    <a
-                        href={certificate.link}
-                        target="_blank"
-                        rel="noreferrer"
+                    {/* TILTING FRAME AREA */}
+                    <div
                         style={{
-                            display: "inline-block",
-                            marginTop: 18,
-                            padding: "10px 14px",
-                            borderRadius: 12,
-                            background: "rgba(99,102,241,0.12)",
-                            border: "1px solid rgba(99,102,241,0.25)",
-                            color: "rgba(15,23,42,0.85)",
-                            textDecoration: "none",
-                            fontSize: 13,
-                            fontWeight: 600,
+                            padding: 14,
+                            background: "linear-gradient(135deg, rgba(2,6,23,0.02), rgba(99,102,241,0.05))",
                         }}
                     >
-                        View credential →
-                    </a>
+                        <div
+                            style={{
+                                perspective: "1400px",
+                            }}
+                        >
+                            <div
+                                ref={frameRef}
+                                onPointerMove={onMove}
+                                onPointerLeave={reset}
+                                style={{
+                                    borderRadius: 18,
+                                    background: "#ffffff",
+                                    border: "1px solid rgba(15,23,42,0.12)",
+                                    boxShadow: "0 24px 80px rgba(0,0,0,0.18)",
+                                    overflow: "hidden",
+                                    transformStyle: "preserve-3d",
+                                    willChange: "transform",
+                                    transform: `rotateX(${tilt.rx}deg) rotateY(${tilt.ry}deg)`,
+                                    transition: tilt.i > 0 ? "none" : "transform 220ms ease-out",
+                                    position: "relative",
+                                }}
+                            >
+                                {/* holo overlays */}
+                                <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: holo.radial }} />
+                                <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: holo.sweep, opacity: 0.75 }} />
+                                <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: holo.shine, opacity: 0.65 }} />
+
+                                {/* image area */}
+                                <div
+                                    style={{
+                                        height: 520,
+                                        display: "grid",
+                                        placeItems: "center",
+                                        background: "rgba(15,23,42,0.02)",
+                                    }}
+                                >
+                                    <img
+                                        src={certificate.image}
+                                        alt={`${certificate.title} credential`}
+                                        style={{
+                                            width: "100%",
+                                            height: "100%",
+                                            objectFit: "contain",
+                                            padding: 18,
+                                            pointerEvents: "none",
+                                        }}
+                                    />
+                                </div>
+                            </div>
+
+                            <div style={{ marginTop: 10, fontSize: 12, color: "rgba(15,23,42,0.55)" }}>
+                                Hover the certificate frame to tilt.
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
+        </ModalPortal>
     );
 }

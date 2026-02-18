@@ -10,53 +10,104 @@ import ArrowLayer from "./ArrowLayer";
 import CertificateModal from "./CertificateModal";
 import CartButton from "./CartButton";
 import CheckoutModal from "./CheckoutModal";
+import SocialNav from "./SocialNav";
 
 export default function PortfolioLayout() {
     const { mode, toggleSkill, selectedSkills, isFlipped, setIsFlipped } = usePortfolio();
 
-    const [openKey, setOpenKey] = useState(null);
-    const [cardRect, setCardRect] = useState(null);
+    // MULTI OPEN: openKeys is an array of section keys in open order
+    const [openKeys, setOpenKeys] = useState([]);
+    // cardRects map: { [key]: {x,y,w,h} }
+    const [cardRects, setCardRects] = useState({});
     const [activeCert, setActiveCert] = useState(null);
     const [checkoutOpen, setCheckoutOpen] = useState(false);
 
     const rowRefs = useRef({});
     const sectionEntries = useMemo(() => Object.entries(sections), []);
-    const openSection = openKey ? sections[openKey] : null;
+    const isRecruiter = mode === "recruiter";
 
-    const closeCard = () => {
-        setOpenKey(null);
-        setCardRect(null);
+    const modalOpen = Boolean(activeCert) || checkoutOpen;
+
+    const closeSectionCard = (key) => {
+        setOpenKeys((prev) => prev.filter((k) => k !== key));
+        setCardRects((prev) => {
+            const next = { ...prev };
+            delete next[key];
+            return next;
+        });
     };
 
-    const placeCardNearRow = (key) => {
-        const el = rowRefs.current[key];
-        const w = 440, h = 360, gap = 24;
-
-        if (!el) return { x: Math.min(window.innerWidth - (w + 12), 760), y: 170, w, h };
-
-        const r = el.getBoundingClientRect();
-        const rightX = r.right + gap;
-        const leftX = r.left - gap - w;
-
-        const x = rightX + w < window.innerWidth - 12 ? rightX : Math.max(12, leftX);
-        const y = Math.max(12, Math.min(r.top - 40, window.innerHeight - h - 12));
-        return { x, y, w, h };
+    const closeAllCards = () => {
+        setOpenKeys([]);
+        setCardRects({});
     };
 
-    const onSectionClick = (key) => {
-        setOpenKey(key);
-        setCardRect(placeCardNearRow(key));
-    };
-
-    // ✅ auto-close section card + certificate modal when flipping
+    // auto-close section cards + certificate modal + checkout on flip
     useEffect(() => {
-        closeCard();
+        closeAllCards();
         setActiveCert(null);
         setCheckoutOpen(false);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isFlipped]);
 
-    const isRecruiter = mode === "recruiter";
+    const placeCard = (key, index) => {
+        const el = rowRefs.current[key];
+        const w = 440;
+        const h = 360;
+        const gap = 26;
+
+        // alternate sides: even -> right, odd -> left
+        const preferRight = index % 2 === 0;
+
+        // baseline Y from row if available
+        let baseY = 170;
+        if (el) {
+            const r = el.getBoundingClientRect();
+            baseY = r.top - 40;
+        }
+
+        // stack spacing to prevent overlap (even right stack, odd left stack)
+        const stackSlot = Math.floor(index / 2);
+        const stackedY = baseY + stackSlot * (h + 18);
+
+        const y = Math.max(12, Math.min(stackedY, window.innerHeight - h - 12));
+
+        // choose X side, clamp to viewport
+        const cvCenterX = window.innerWidth / 2;
+
+        let xRight = Math.min(window.innerWidth - w - 12, cvCenterX + 330);
+        let xLeft = Math.max(12, cvCenterX - 330 - w);
+
+        // keep a tiny gap from CV area if needed
+        // (gap variable is here if you want to use it later)
+        void gap;
+
+        const x = preferRight ? xRight : xLeft;
+
+        return { x, y, w, h };
+    };
+
+    const onSectionClick = (key) => {
+        // Optional: if modal open, don't open cards behind it
+        if (modalOpen) return;
+
+        setOpenKeys((prev) => {
+            if (prev.includes(key)) return prev; // already open (keep it)
+            const next = [...prev, key];
+
+            // ensure we create an initial rect immediately for arrow + card placement
+            setCardRects((rects) => ({
+                ...rects,
+                [key]: placeCard(key, next.length - 1),
+            }));
+
+            return next;
+        });
+    };
+
+    const onRectChange = (key, rect) => {
+        setCardRects((prev) => ({ ...prev, [key]: rect }));
+    };
 
     return (
         <div
@@ -70,6 +121,7 @@ export default function PortfolioLayout() {
         >
             <ModeToggle />
             <RecruiterPanel />
+            <SocialNav visible={isRecruiter} />
 
             {/* Flip button */}
             <button
@@ -79,7 +131,7 @@ export default function PortfolioLayout() {
                     bottom: 18,
                     left: "50%",
                     transform: "translateX(-50%)",
-                    zIndex: 110,
+                    zIndex: 160,
                     padding: "10px 16px",
                     borderRadius: 999,
                     cursor: "pointer",
@@ -103,6 +155,7 @@ export default function PortfolioLayout() {
             {/* CV Panel */}
             <CVPanel
                 isFlipped={isFlipped}
+                disabled={modalOpen}   // ✅ critical fix
                 childrenFront={
                     <div>
                         <div style={{ borderBottom: "1px solid rgba(15,23,42,0.10)", paddingBottom: 14, marginBottom: 18 }}>
@@ -113,13 +166,13 @@ export default function PortfolioLayout() {
                                 React Front-End Developer
                             </div>
                             <div style={{ marginTop: 10, fontSize: 12.5, color: "rgba(15,23,42,0.60)" }}>
-                                Drag paper background to rotate • Click sections for details
+                                Drag background to rotate • Click sections to open multiple cards
                             </div>
                         </div>
 
                         <div style={{ display: "grid", gap: 10 }}>
                             {sectionEntries.map(([key, s]) => {
-                                const active = openKey === key;
+                                const active = openKeys.includes(key);
 
                                 return (
                                     <button
@@ -137,9 +190,7 @@ export default function PortfolioLayout() {
                                                 : "rgba(255,255,255,0.78)",
                                             padding: "14px 14px",
                                             cursor: "pointer",
-                                            transition: "transform 120ms ease, box-shadow 120ms ease, background 120ms ease",
                                             boxShadow: active ? "0 10px 30px rgba(99,102,241,0.12)" : "none",
-                                            outline: "none",
                                         }}
                                         aria-expanded={active}
                                     >
@@ -149,14 +200,15 @@ export default function PortfolioLayout() {
                                                     {s.label}
                                                     {isRecruiter && key === "skills" ? (
                                                         <span style={{ marginLeft: 10, fontSize: 11, color: "rgba(99,102,241,0.9)" }}>
-                                                            (tap to select)
+                                                            (selectable)
                                                         </span>
                                                     ) : null}
                                                 </div>
                                                 <div style={{ marginTop: 4, fontSize: 12.5, color: "rgba(15,23,42,0.55)" }}>{s.sub}</div>
                                             </div>
+
                                             <div style={{ color: active ? "rgba(99,102,241,0.95)" : "rgba(15,23,42,0.35)", fontSize: 16 }}>
-                                                ›
+                                                {active ? "●" : "›"}
                                             </div>
                                         </div>
                                     </button>
@@ -166,7 +218,7 @@ export default function PortfolioLayout() {
 
                         {isRecruiter ? (
                             <div style={{ marginTop: 18, fontSize: 12.5, color: "rgba(15,23,42,0.55)" }}>
-                                Recruiter Mode: select skills, then use the cart to email me.
+                                Recruiter Mode: select skills in the Skills card → use cart to email.
                                 {selectedSkills.length > 0 ? (
                                     <span style={{ marginLeft: 10, color: "rgba(99,102,241,0.95)", fontWeight: 800 }}>
                                         Selected: {selectedSkills.length}
@@ -210,123 +262,132 @@ export default function PortfolioLayout() {
                 }
             />
 
-            {/* Arrow tracking */}
-            {openKey && cardRect && rowRefs.current[openKey] ? (
-                <ArrowLayer
-                    fromEl={rowRefs.current[openKey]}
-                    cardRect={cardRect}
-                    visibleKey={`${openKey}-${Math.round(cardRect.x)}-${Math.round(cardRect.y)}`}
-                />
-            ) : null}
+            {/* ARROWS: one per open card */}
+            {openKeys.map((key) => {
+                const rect = cardRects[key];
+                const rowEl = rowRefs.current[key];
+                if (!rect || !rowEl) return null;
+                return <ArrowLayer key={`arrow-${key}`} fromEl={rowEl} cardRect={rect} id={key} />;
+            })}
 
-            {/* Floating card */}
-            {openSection && cardRect ? (
-                <FloatingCard
-                    title={openSection.label}
-                    initial={{ x: cardRect.x, y: cardRect.y }}
-                    onClose={closeCard}
-                    onRectChange={setCardRect}
-                >
-                    {openKey === "skills" ? (
-                        <div>
-                            <div style={{ fontSize: 12.5, color: "rgba(148,163,184,0.92)", marginBottom: 10 }}>
-                                {isRecruiter ? "Click to add/remove skills → then use the cart." : "Skills overview."}
-                            </div>
+            {/* CARDS: multiple open at once */}
+            {openKeys.map((key) => {
+                const rect = cardRects[key];
+                if (!rect) return null;
 
-                            <div style={{ fontSize: 12, letterSpacing: "0.10em", textTransform: "uppercase", color: "rgba(199,210,254,0.95)", marginBottom: 8 }}>
-                                Technical
-                            </div>
+                const s = sections[key];
 
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
-                                {openSection.content.technical.map((skill) => {
-                                    const selected = selectedSkills.includes(skill);
-                                    return (
-                                        <button
+                return (
+                    <FloatingCard
+                        key={`card-${key}`}
+                        title={s.label}
+                        initial={{ x: rect.x, y: rect.y }}
+                        onClose={() => closeSectionCard(key)}
+                        onRectChange={(r) => onRectChange(key, r)}
+                        disabled={modalOpen} // ✅ recommended to prevent pointer capture conflicts
+                    >
+                        {key === "skills" ? (
+                            <div>
+                                <div style={{ fontSize: 12.5, color: "rgba(148,163,184,0.92)", marginBottom: 10 }}>
+                                    {isRecruiter ? "Click to add/remove skills → then use the cart." : "Skills overview."}
+                                </div>
+
+                                <div style={{ fontSize: 12, letterSpacing: "0.10em", textTransform: "uppercase", color: "rgba(199,210,254,0.95)", marginBottom: 8 }}>
+                                    Technical
+                                </div>
+
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
+                                    {s.content.technical.map((skill) => {
+                                        const selected = selectedSkills.includes(skill);
+                                        return (
+                                            <button
+                                                key={skill}
+                                                type="button"
+                                                onClick={() => isRecruiter && toggleSkill(skill)}
+                                                style={{
+                                                    borderRadius: 999,
+                                                    padding: "8px 10px",
+                                                    fontSize: 12.5,
+                                                    cursor: isRecruiter ? "pointer" : "default",
+                                                    border: selected ? "1px solid rgba(99,102,241,0.65)" : "1px solid rgba(255,255,255,0.10)",
+                                                    background: selected
+                                                        ? "linear-gradient(135deg, rgba(99,102,241,0.70), rgba(167,139,250,0.28))"
+                                                        : "rgba(255,255,255,0.06)",
+                                                    color: selected ? "#fff" : "rgba(226,232,240,0.92)",
+                                                }}
+                                            >
+                                                {skill}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                <div style={{ fontSize: 12, letterSpacing: "0.10em", textTransform: "uppercase", color: "rgba(199,210,254,0.95)", marginBottom: 8 }}>
+                                    Soft
+                                </div>
+
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                                    {s.content.soft.map((skill) => (
+                                        <span
                                             key={skill}
-                                            type="button"
-                                            onClick={() => isRecruiter && toggleSkill(skill)}
                                             style={{
                                                 borderRadius: 999,
                                                 padding: "8px 10px",
                                                 fontSize: 12.5,
-                                                cursor: isRecruiter ? "pointer" : "default",
-                                                border: selected ? "1px solid rgba(99,102,241,0.65)" : "1px solid rgba(255,255,255,0.10)",
-                                                background: selected
-                                                    ? "linear-gradient(135deg, rgba(99,102,241,0.70), rgba(167,139,250,0.28))"
-                                                    : "rgba(255,255,255,0.06)",
-                                                color: selected ? "#fff" : "rgba(226,232,240,0.92)",
+                                                border: "1px solid rgba(255,255,255,0.10)",
+                                                background: "rgba(255,255,255,0.06)",
+                                                color: "rgba(226,232,240,0.90)",
                                             }}
-                                            title={isRecruiter ? "Select skill" : undefined}
                                         >
                                             {skill}
-                                        </button>
-                                    );
-                                })}
+                                        </span>
+                                    ))}
+                                </div>
                             </div>
-
-                            <div style={{ fontSize: 12, letterSpacing: "0.10em", textTransform: "uppercase", color: "rgba(199,210,254,0.95)", marginBottom: 8 }}>
-                                Soft
+                        ) : key === "info" ? (
+                            <div>
+                                <div style={{ fontSize: 14.5, fontWeight: 800, marginBottom: 6 }}>{s.content.name}</div>
+                                <div style={{ color: "rgba(199,210,254,0.90)", marginBottom: 10 }}>{s.content.role}</div>
+                                <div style={{ color: "rgba(226,232,240,0.86)", marginBottom: 12 }}>{s.content.bio}</div>
+                                <div style={{ display: "grid", gap: 8, fontSize: 13 }}>
+                                    <div>📧 {s.content.email}</div>
+                                    <div>📍 {s.content.location}</div>
+                                </div>
                             </div>
-
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                                {openSection.content.soft.map((skill) => (
-                                    <span
-                                        key={skill}
-                                        style={{
-                                            borderRadius: 999,
-                                            padding: "8px 10px",
-                                            fontSize: 12.5,
-                                            border: "1px solid rgba(255,255,255,0.10)",
-                                            background: "rgba(255,255,255,0.06)",
-                                            color: "rgba(226,232,240,0.90)",
-                                        }}
-                                    >
-                                        {skill}
-                                    </span>
+                        ) : key === "education" ? (
+                            <div style={{ display: "grid", gap: 10 }}>
+                                {s.content.items.map((it) => (
+                                    <div key={it.title} style={{ padding: 10, borderRadius: 12, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                                        <div style={{ fontWeight: 800 }}>{it.title}</div>
+                                        <div style={{ color: "rgba(148,163,184,0.92)", marginTop: 4, fontSize: 12.5 }}>{it.meta}</div>
+                                    </div>
                                 ))}
                             </div>
-                        </div>
-                    ) : openKey === "info" ? (
-                        <div>
-                            <div style={{ fontSize: 14.5, fontWeight: 800, marginBottom: 6 }}>{openSection.content.name}</div>
-                            <div style={{ color: "rgba(199,210,254,0.90)", marginBottom: 10 }}>{openSection.content.role}</div>
-                            <div style={{ color: "rgba(226,232,240,0.86)", marginBottom: 12 }}>{openSection.content.bio}</div>
-                            <div style={{ display: "grid", gap: 8, fontSize: 13 }}>
-                                <div>📧 {openSection.content.email}</div>
-                                <div>📍 {openSection.content.location}</div>
+                        ) : (
+                            <div style={{ display: "grid", gap: 12 }}>
+                                {s.content.items.map((it) => (
+                                    <div key={it.title} style={{ padding: 10, borderRadius: 12, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                                        <div style={{ fontWeight: 800 }}>{it.title}</div>
+                                        <div style={{ color: "rgba(148,163,184,0.92)", marginTop: 4, fontSize: 12.5 }}>{it.meta}</div>
+                                        <ul style={{ marginTop: 10, paddingLeft: 18, color: "rgba(226,232,240,0.88)" }}>
+                                            {it.bullets.map((b) => (
+                                                <li key={b} style={{ marginBottom: 6 }}>
+                                                    {b}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                ))}
                             </div>
-                        </div>
-                    ) : openKey === "education" ? (
-                        <div style={{ display: "grid", gap: 10 }}>
-                            {openSection.content.items.map((it) => (
-                                <div key={it.title} style={{ padding: 10, borderRadius: 12, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}>
-                                    <div style={{ fontWeight: 800 }}>{it.title}</div>
-                                    <div style={{ color: "rgba(148,163,184,0.92)", marginTop: 4, fontSize: 12.5 }}>{it.meta}</div>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div style={{ display: "grid", gap: 12 }}>
-                            {openSection.content.items.map((it) => (
-                                <div key={it.title} style={{ padding: 10, borderRadius: 12, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}>
-                                    <div style={{ fontWeight: 800 }}>{it.title}</div>
-                                    <div style={{ color: "rgba(148,163,184,0.92)", marginTop: 4, fontSize: 12.5 }}>{it.meta}</div>
-                                    <ul style={{ marginTop: 10, paddingLeft: 18, color: "rgba(226,232,240,0.88)" }}>
-                                        {it.bullets.map((b) => (
-                                            <li key={b} style={{ marginBottom: 6 }}>{b}</li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </FloatingCard>
-            ) : null}
+                        )}
+                    </FloatingCard>
+                );
+            })}
 
-            {/* Certificate modal */}
+            {/* certificate modal */}
             {activeCert ? <CertificateModal certificate={activeCert} onClose={() => setActiveCert(null)} /> : null}
 
-            {/* Checkout modal */}
+            {/* checkout modal */}
             {checkoutOpen ? <CheckoutModal onClose={() => setCheckoutOpen(false)} /> : null}
         </div>
     );

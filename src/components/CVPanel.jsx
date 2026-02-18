@@ -3,35 +3,66 @@ import { useEffect, useMemo, useRef, useState } from "react";
 /**
  * White paper CV with drag-to-rotate spring physics + holographic layers.
  * IMPORTANT: drag will NOT steal clicks (threshold + ignore interactive targets).
+ *
+ * FIX: Properly RELEASE pointer capture on pointerup/cancel + when disabled turns true.
  */
-export default function CVPanel({ isFlipped, childrenFront, childrenBack }) {
+export default function CVPanel({ isFlipped, childrenFront, childrenBack, disabled = false }) {
     const wrapRef = useRef(null);
 
     const [rot, setRot] = useState({ rx: 0, ry: 0 });
     const rotRef = useRef({ rx: 0, ry: 0 });
     const velRef = useRef({ vx: 0, vy: 0 });
 
-    const pendingRef = useRef(false);       // pointer down but not yet dragging
-    const draggingRef = useRef(false);      // actively dragging
+    const pendingRef = useRef(false);
+    const draggingRef = useRef(false);
     const pointerIdRef = useRef(null);
+    const capturedRef = useRef(false); // ✅ track capture state
     const startRef = useRef({ x: 0, y: 0, rx: 0, ry: 0 });
 
     const [holo, setHolo] = useState({ x: 0, y: 0, intensity: 0 });
 
     const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
-    const DRAG_THRESHOLD = 6; // px
+    const DRAG_THRESHOLD = 6;
+
+    const releaseCapture = () => {
+        const el = wrapRef.current;
+        const pid = pointerIdRef.current;
+        if (!el || pid == null || !capturedRef.current) return;
+        try {
+            el.releasePointerCapture(pid);
+        } catch (_) {
+            // ignore
+        }
+        capturedRef.current = false;
+    };
+
+    const resetPointerState = () => {
+        pendingRef.current = false;
+        draggingRef.current = false;
+        pointerIdRef.current = null;
+        capturedRef.current = false;
+    };
+
+    // ✅ If disabled becomes true (e.g., a modal opens), release capture immediately
+    useEffect(() => {
+        if (!disabled) return;
+        releaseCapture();
+        resetPointerState();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [disabled]);
 
     // spring back to 0
     useEffect(() => {
         let raf = 0;
+
         const tick = () => {
-            if (draggingRef.current) {
+            if (draggingRef.current || disabled) {
                 raf = requestAnimationFrame(tick);
                 return;
             }
 
-            const k = 0.12; // spring
-            const c = 0.82; // damping
+            const k = 0.12;
+            const c = 0.82;
 
             let { rx, ry } = rotRef.current;
             let { vx, vy } = velRef.current;
@@ -66,7 +97,7 @@ export default function CVPanel({ isFlipped, childrenFront, childrenBack }) {
 
         raf = requestAnimationFrame(tick);
         return () => cancelAnimationFrame(raf);
-    }, []);
+    }, [disabled]);
 
     const isInteractiveTarget = (target) => {
         if (!(target instanceof HTMLElement)) return false;
@@ -74,12 +105,14 @@ export default function CVPanel({ isFlipped, childrenFront, childrenBack }) {
     };
 
     const onPointerDown = (e) => {
-        // If user pressed on an interactive element, do NOT start drag logic
+        if (disabled) return;
+        if (e.button != null && e.button !== 0) return; // primary button only
         if (isInteractiveTarget(e.target)) return;
 
         pendingRef.current = true;
         draggingRef.current = false;
         pointerIdRef.current = e.pointerId;
+        capturedRef.current = false;
 
         startRef.current = {
             x: e.clientX,
@@ -90,24 +123,26 @@ export default function CVPanel({ isFlipped, childrenFront, childrenBack }) {
     };
 
     const onPointerMove = (e) => {
-        // Only respond to the active pointer
+        if (disabled) return;
         if (pointerIdRef.current !== e.pointerId) return;
-
         if (!pendingRef.current && !draggingRef.current) return;
 
         const dx = e.clientX - startRef.current.x;
         const dy = e.clientY - startRef.current.y;
 
-        // If we haven't started dragging yet, wait for threshold
         if (pendingRef.current && !draggingRef.current) {
             if (Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
 
-            // start dragging now
             pendingRef.current = false;
             draggingRef.current = true;
 
-            // capture pointer now (so clicks still work)
-            wrapRef.current?.setPointerCapture(e.pointerId);
+            // ✅ capture pointer only when actually dragging
+            try {
+                wrapRef.current?.setPointerCapture(e.pointerId);
+                capturedRef.current = true;
+            } catch (_) {
+                capturedRef.current = false;
+            }
         }
 
         if (!draggingRef.current) return;
@@ -127,10 +162,12 @@ export default function CVPanel({ isFlipped, childrenFront, childrenBack }) {
         }
     };
 
-    const endPointer = () => {
-        pendingRef.current = false;
-        draggingRef.current = false;
-        pointerIdRef.current = null;
+    const endPointer = (e) => {
+        // ✅ always release capture when the active pointer ends/cancels
+        if (pointerIdRef.current === e.pointerId) {
+            releaseCapture();
+            resetPointerState();
+        }
     };
 
     const transform = useMemo(() => {
@@ -152,22 +189,25 @@ export default function CVPanel({ isFlipped, childrenFront, childrenBack }) {
     return (
         <div
             ref={wrapRef}
-            onPointerDown={onPointerDown}
-            onPointerMove={onPointerMove}
-            onPointerUp={endPointer}
-            onPointerCancel={endPointer}
+            onPointerDown={disabled ? undefined : onPointerDown}
+            onPointerMove={disabled ? undefined : onPointerMove}
+            onPointerUp={disabled ? undefined : endPointer}
+            onPointerCancel={disabled ? undefined : endPointer}
             style={{
                 width: "min(560px, 90vw)",
                 aspectRatio: "210 / 297",
                 transform,
                 transformStyle: "preserve-3d",
-                transition: draggingRef.current ? "none" : "transform 180ms ease-out",
+                transition: disabled ? "transform 180ms ease-out" : (draggingRef.current ? "none" : "transform 180ms ease-out"),
                 borderRadius: 8,
                 boxShadow: "var(--shadowHeavy)",
                 position: "relative",
-                cursor: draggingRef.current ? "grabbing" : "grab",
+                cursor: disabled ? "default" : (draggingRef.current ? "grabbing" : "grab"),
                 userSelect: "none",
                 background: "transparent",
+
+                // ✅ When disabled (modal open), CV is fully inert
+                pointerEvents: disabled ? "none" : "auto",
             }}
             aria-label="CV paper"
         >

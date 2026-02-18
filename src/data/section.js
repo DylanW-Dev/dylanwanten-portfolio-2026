@@ -1,4 +1,4 @@
-import screenShotImg from "../assets/screenshot.png";
+import screenshotIMG from "../assets/screenshot.png";
 
 export const sections = {
     info: {
@@ -70,7 +70,7 @@ export const certificates = [
     {
         title: "Meta Front-End Developer Professional Certificate",
         issuer: "Coursera / Meta",
-        image: "/certificate-placeholder.png",
+        image: screenshotIMG,
         link: "#",
     },
     {
@@ -82,7 +82,14 @@ export const certificates = [
     {
         title: "Version Control",
         issuer: "Coursera / Meta",
-        image: screenShotImg,
+        image: "/certificate-placeholder.png",
         link: "#",
     },
+];
+
+export const socials = [
+    { label: "LinkedIn", href: "#", icon: "in" },
+    { label: "GitHub", href: "#", icon: "gh" },
+    { label: "Portfolio", href: "#", icon: "↗" },
+    { label: "Email", href: "mailto:your.email@example.com", icon: "@" },
 ];

@@ -6,12 +6,14 @@ export default function FloatingCard({
     onClose,
     onRectChange,
     children,
+    disabled = false,
 }) {
     const size = { w: 440, h: 360 };
 
     const { pos, bind } = useDraggable({
         initial,
         size,
+        disabled,
         onChange: (p) => onRectChange?.({ x: p.x, y: p.y, w: size.w, h: size.h }),
     });
 
@@ -20,8 +22,8 @@ export default function FloatingCard({
             className="anim-popIn"
             style={{
                 position: "fixed",
-                left: pos.x,
-                top: pos.y,
+                left: pos?.x ?? 12,
+                top: pos?.y ?? 12,
                 width: size.w,
                 minHeight: size.h,
                 zIndex: 65,
@@ -31,6 +33,9 @@ export default function FloatingCard({
                 boxShadow: "var(--shadowCard)",
                 backdropFilter: "blur(14px)",
                 overflow: "hidden",
+
+                // ✅ if disabled, don't let this card steal pointer streams
+                pointerEvents: disabled ? "none" : "auto",
             }}
         >
             {/* HEADER = DRAG HANDLE */}
@@ -41,10 +46,9 @@ export default function FloatingCard({
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
-                    cursor: "grab",
+                    cursor: disabled ? "default" : "grab",
                     userSelect: "none",
-                    background:
-                        "linear-gradient(135deg, rgba(99,102,241,0.25), rgba(167,139,250,0.10))",
+                    background: "linear-gradient(135deg, rgba(99,102,241,0.25), rgba(167,139,250,0.10))",
                     borderBottom: "1px solid rgba(255,255,255,0.08)",
                 }}
             >
@@ -61,7 +65,8 @@ export default function FloatingCard({
 
                 <button
                     type="button"
-                    onClick={(e) => {
+                    // pointerdown is more reliable than click when pointer capture exists elsewhere
+                    onPointerDown={(e) => {
                         e.stopPropagation();
                         onClose?.();
                     }}
@@ -75,15 +80,15 @@ export default function FloatingCard({
                         color: "rgba(255,255,255,0.9)",
                         cursor: "pointer",
                         fontSize: 18,
+
+                        // If parent pointerEvents is none, this won't fire anyway.
                     }}
                 >
                     ×
                 </button>
             </div>
 
-            <div style={{ padding: 14, maxHeight: 300, overflow: "auto" }}>
-                {children}
-            </div>
+            <div style={{ padding: 14, maxHeight: 300, overflow: "auto" }}>{children}</div>
 
             <div
                 style={{
