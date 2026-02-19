@@ -11,6 +11,14 @@ const glass = {
     boxShadow: "0 18px 60px rgba(0,0,0,0.35)",
 };
 
+// Opaque variant for mobile — readable over any background
+const glassSolid = {
+    background: "rgba(2,6,23,0.94)",
+    border: "1px solid rgba(255,255,255,0.10)",
+    backdropFilter: "blur(12px)",
+    boxShadow: "0 18px 60px rgba(0,0,0,0.35)",
+};
+
 const iconSpan = {
     width: 20,
     height: 20,
@@ -146,7 +154,7 @@ export default function SocialNav({ visible, onMailClick, selectedSkillsCount = 
                         aria-expanded={menuOpen}
                         onClick={() => setMenuOpen((o) => !o)}
                         style={{
-                            ...glass,
+                            ...glassSolid,
                             width: 42,
                             height: 42,
                             borderRadius: 14,
@@ -168,7 +176,7 @@ export default function SocialNav({ visible, onMailClick, selectedSkillsCount = 
                     </button>
 
                     {/* Mail always visible */}
-                    <div style={{ ...glass, borderRadius: 14, padding: 0 }}>
+                    <div style={{ ...glassSolid, borderRadius: 14, padding: 0 }}>
                         <MailButton onClick={onMailClick} count={selectedSkillsCount} />
                     </div>
                 </div>
@@ -177,7 +185,7 @@ export default function SocialNav({ visible, onMailClick, selectedSkillsCount = 
                 {menuOpen && (
                     <div
                         style={{
-                            ...glass,
+                            ...glassSolid,
                             position: "absolute",
                             top: "calc(100% + 8px)",
                             left: 0,

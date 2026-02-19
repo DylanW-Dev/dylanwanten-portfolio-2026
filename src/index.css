@@ -87,8 +87,10 @@ body::before {
 /* Utility-ish */
 button {
   font: inherit;
+  -webkit-tap-highlight-color: transparent;
 }
 
 a {
   color: inherit;
+  -webkit-tap-highlight-color: transparent;
 }

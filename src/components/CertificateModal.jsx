@@ -87,7 +87,7 @@ export default function CertificateModal({ certificate, onClose }) {
                     // Prevent backdrop close when interacting inside
                     onPointerDown={(e) => e.stopPropagation()}
                     style={{
-                        width: "min(820px, 96vw)",
+                        width: "min(820px, 100%)",
                         maxHeight: "92vh",
                         overflow: "hidden",
                         overflowY: "auto",

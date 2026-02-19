@@ -8,6 +8,16 @@ import { useEffect, useMemo, useRef, useState } from "react";
  */
 export default function CVPanel({ isFlipped, childrenFront, childrenBack, disabled = false }) {
     const wrapRef = useRef(null);
+    const [isMobile, setIsMobile] = useState(() => window.innerWidth < 640);
+
+    useEffect(() => {
+        const onResize = () => setIsMobile(window.innerWidth < 640);
+        window.addEventListener("resize", onResize);
+        return () => window.removeEventListener("resize", onResize);
+    }, []);
+
+    // On mobile, disable drag entirely so touch-scroll works freely in the CV content
+    const dragDisabled = disabled || isMobile;
 
     const [rot, setRot] = useState({ rx: 0, ry: 0 });
     const rotRef = useRef({ rx: 0, ry: 0 });
@@ -43,20 +53,20 @@ export default function CVPanel({ isFlipped, childrenFront, childrenBack, disabl
         capturedRef.current = false;
     };
 
-    // ✅ If disabled becomes true (e.g., a modal opens), release capture immediately
+    // ✅ If dragDisabled becomes true (modal opens or resized to mobile), release capture immediately
     useEffect(() => {
-        if (!disabled) return;
+        if (!dragDisabled) return;
         releaseCapture();
         resetPointerState();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [disabled]);
+    }, [dragDisabled]);
 
     // spring back to 0
     useEffect(() => {
         let raf = 0;
 
         const tick = () => {
-            if (draggingRef.current || disabled) {
+            if (draggingRef.current || dragDisabled) {
                 raf = requestAnimationFrame(tick);
                 return;
             }
@@ -97,7 +107,7 @@ export default function CVPanel({ isFlipped, childrenFront, childrenBack, disabl
 
         raf = requestAnimationFrame(tick);
         return () => cancelAnimationFrame(raf);
-    }, [disabled]);
+    }, [dragDisabled]);
 
     const isInteractiveTarget = (target) => {
         if (!(target instanceof HTMLElement)) return false;
@@ -105,7 +115,7 @@ export default function CVPanel({ isFlipped, childrenFront, childrenBack, disabl
     };
 
     const onPointerDown = (e) => {
-        if (disabled) return;
+        if (dragDisabled) return;
         if (e.button != null && e.button !== 0) return; // primary button only
         if (isInteractiveTarget(e.target)) return;
 
@@ -123,7 +133,7 @@ export default function CVPanel({ isFlipped, childrenFront, childrenBack, disabl
     };
 
     const onPointerMove = (e) => {
-        if (disabled) return;
+        if (dragDisabled) return;
         if (pointerIdRef.current !== e.pointerId) return;
         if (!pendingRef.current && !draggingRef.current) return;
 
@@ -189,24 +199,24 @@ export default function CVPanel({ isFlipped, childrenFront, childrenBack, disabl
     return (
         <div
             ref={wrapRef}
-            onPointerDown={disabled ? undefined : onPointerDown}
-            onPointerMove={disabled ? undefined : onPointerMove}
-            onPointerUp={disabled ? undefined : endPointer}
-            onPointerCancel={disabled ? undefined : endPointer}
+            onPointerDown={dragDisabled ? undefined : onPointerDown}
+            onPointerMove={dragDisabled ? undefined : onPointerMove}
+            onPointerUp={dragDisabled ? undefined : endPointer}
+            onPointerCancel={dragDisabled ? undefined : endPointer}
             style={{
                 width: "min(560px, 90vw)",
                 aspectRatio: "210 / 297",
                 transform,
                 transformStyle: "preserve-3d",
-                transition: disabled ? "transform 180ms ease-out" : (draggingRef.current ? "none" : "transform 180ms ease-out"),
+                transition: dragDisabled ? "transform 180ms ease-out" : (draggingRef.current ? "none" : "transform 180ms ease-out"),
                 borderRadius: 8,
                 boxShadow: "var(--shadowHeavy)",
                 position: "relative",
-                cursor: disabled ? "default" : (draggingRef.current ? "grabbing" : "grab"),
+                cursor: dragDisabled ? "default" : (draggingRef.current ? "grabbing" : "grab"),
                 userSelect: "none",
                 background: "transparent",
 
-                // ✅ When disabled (modal open), CV is fully inert
+                // When a modal is open, CV is fully inert — NOT when just on mobile (needs touch events for scroll)
                 pointerEvents: disabled ? "none" : "auto",
             }}
             aria-label="CV paper"

@@ -1,8 +1,13 @@
 import { useEffect, useState } from "react";
 import useDraggable from "../hooks/useDraggable";
 
-function getCardWidth() {
-    return Math.min(440, window.innerWidth - 24);
+function getCardMetrics() {
+    const mobile = window.innerWidth < 640;
+    return {
+        w: mobile ? window.innerWidth - 16 : Math.min(440, window.innerWidth - 24),
+        h: mobile ? Math.round(window.innerHeight * 0.74) : 380,
+        mobile,
+    };
 }
 
 export default function FloatingCard({
@@ -13,15 +18,16 @@ export default function FloatingCard({
     children,
     disabled = false,
 }) {
-    const [cardW, setCardW] = useState(getCardWidth);
+    const [metrics, setMetrics] = useState(getCardMetrics);
 
     useEffect(() => {
-        const onResize = () => setCardW(getCardWidth());
+        const onResize = () => setMetrics(getCardMetrics());
         window.addEventListener("resize", onResize);
         return () => window.removeEventListener("resize", onResize);
     }, []);
 
-    const size = { w: cardW, h: 380 };
+    const { w: cardW, h: cardH, mobile: isMobile } = metrics;
+    const size = { w: cardW, h: cardH };
 
     const { pos, bind } = useDraggable({
         initial,
@@ -103,20 +109,22 @@ export default function FloatingCard({
             </div>
 
             {/* CONTENT */}
-            <div style={{ padding: "20px 22px", maxHeight: 340, overflowY: "auto" }}>
+            <div style={{ padding: "20px 22px", maxHeight: isMobile ? cardH - 142 : 340, overflowY: "auto" }}>
                 {children}
             </div>
 
-            {/* FOOTER HINT */}
-            <div
-                style={{
-                    padding: "0 22px 18px",
-                    fontSize: 11,
-                    color: "rgba(148,163,184,0.55)",
-                }}
-            >
-                Drag from header · Click inside normally
-            </div>
+            {/* FOOTER HINT — desktop only */}
+            {!isMobile && (
+                <div
+                    style={{
+                        padding: "0 22px 18px",
+                        fontSize: 11,
+                        color: "rgba(148,163,184,0.55)",
+                    }}
+                >
+                    Drag from header · Click inside normally
+                </div>
+            )}
         </div>
     );
 }

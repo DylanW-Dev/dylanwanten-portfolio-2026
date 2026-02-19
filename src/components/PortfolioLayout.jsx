@@ -50,11 +50,12 @@ export default function PortfolioLayout() {
 
     const placeCard = (key, index) => {
         const el = rowRefs.current[key];
-        const w = Math.min(440, window.innerWidth - 24);
-        const h = 380;
+        const mobile = window.innerWidth < 640;
+        const w = mobile ? window.innerWidth - 16 : Math.min(440, window.innerWidth - 24);
+        const h = mobile ? Math.round(window.innerHeight * 0.74) : 380;
 
         // On mobile: stack cards centered at the top
-        if (window.innerWidth < 640) {
+        if (mobile) {
             const x = Math.max(0, Math.floor((window.innerWidth - w) / 2));
             const y = Math.max(80, 80 + index * (h + 12));
             return { x, y, w, h };
