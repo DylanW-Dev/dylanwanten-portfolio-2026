@@ -117,11 +117,21 @@ export default function PortfolioLayout() {
     return (
         <div
             style={{
-                minHeight: "100vh",
-                display: "grid",
-                placeItems: "center",
-                padding: 24,
-                paddingTop: 90,
+                // Mobile: exact viewport, no white bars; Desktop: grid-centered, scrollable
+                ...(isMobile ? {
+                    height: "100vh",
+                    overflow: "hidden",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    padding: "78px 8px 8px",
+                } : {
+                    minHeight: "100vh",
+                    display: "grid",
+                    placeItems: "center",
+                    padding: 24,
+                    paddingTop: 90,
+                }),
                 perspective: "1500px",
             }}
         >

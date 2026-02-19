@@ -204,8 +204,15 @@ export default function CVPanel({ isFlipped, childrenFront, childrenBack, disabl
             onPointerUp={dragDisabled ? undefined : endPointer}
             onPointerCancel={dragDisabled ? undefined : endPointer}
             style={{
-                width: "min(560px, 90vw)",
-                aspectRatio: "210 / 297",
+                // Mobile: fill remaining flex space; Desktop: A4 aspect-ratio paper
+                ...(dragDisabled ? {
+                    flex: 1,
+                    width: "100%",
+                    minHeight: 0,
+                } : {
+                    width: "min(560px, 90vw)",
+                    aspectRatio: "210 / 297",
+                }),
                 // On mobile: no 3D at all — iOS Safari cannot scroll inside preserve-3d
                 ...(dragDisabled ? {} : {
                     transform,
