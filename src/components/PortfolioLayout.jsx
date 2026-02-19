@@ -13,6 +13,13 @@ import SocialNav from "./SocialNav";
 export default function PortfolioLayout() {
     const { mode, toggleSkill, selectedSkills, isFlipped, setIsFlipped } = usePortfolio();
 
+    const [isMobile, setIsMobile] = useState(() => window.innerWidth < 640);
+    useEffect(() => {
+        const onResize = () => setIsMobile(window.innerWidth < 640);
+        window.addEventListener("resize", onResize);
+        return () => window.removeEventListener("resize", onResize);
+    }, []);
+
     // MULTI OPEN: openKeys is an array of section keys in open order
     const [openKeys, setOpenKeys] = useState([]);
     // cardRects map: { [key]: {x,y,w,h} }
@@ -119,10 +126,16 @@ export default function PortfolioLayout() {
             }}
         >
             <ModeToggle />
-            <SocialNav visible={isRecruiter} onMailClick={() => setCheckoutOpen(true)} selectedSkillsCount={selectedSkills.length} />
+            <SocialNav
+                visible={isRecruiter}
+                onMailClick={() => setCheckoutOpen(true)}
+                selectedSkillsCount={selectedSkills.length}
+                isFlipped={isFlipped}
+                onFlip={() => setIsFlipped((f) => !f)}
+            />
 
-            {/* Flip button */}
-            <button
+            {/* Flip button — desktop only; mobile uses SocialNav's flip icon */}
+            {!isMobile && <button
                 onClick={() => setIsFlipped((f) => !f)}
                 style={{
                     position: "fixed",
@@ -146,7 +159,7 @@ export default function PortfolioLayout() {
             >
                 <span style={{ opacity: 0.9 }}>{isFlipped ? "Show CV" : "Flip page"}</span>
                 <span style={{ color: "rgba(199,210,254,0.95)" }}>↻</span>
-            </button>
+            </button>}
 
             {/* CV Panel */}
             <CVPanel

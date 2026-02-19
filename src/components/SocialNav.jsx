@@ -126,7 +126,7 @@ function CvDownload({ onClick }) {
     );
 }
 
-export default function SocialNav({ visible, onMailClick, selectedSkillsCount = 0 }) {
+export default function SocialNav({ visible, onMailClick, selectedSkillsCount = 0, isFlipped, onFlip }) {
     const [menuOpen, setMenuOpen] = useState(false);
     const [isMobile, setIsMobile] = useState(() => window.innerWidth < 640);
 
@@ -136,7 +136,8 @@ export default function SocialNav({ visible, onMailClick, selectedSkillsCount = 
         return () => window.removeEventListener("resize", onResize);
     }, []);
 
-    if (!visible) return null;
+    // Desktop with no recruiter mode → nothing to show
+    if (!visible && !isMobile) return null;
 
     if (isMobile) {
         return (
@@ -146,13 +147,48 @@ export default function SocialNav({ visible, onMailClick, selectedSkillsCount = 
                 role="navigation"
                 aria-label="Social links"
             >
-                {/* Top row: burger + mail (always visible) */}
+                {/* Top row: burger (recruiter only) + mail (recruiter only) + flip (always) */}
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    {visible && (
+                        <button
+                            type="button"
+                            aria-label={menuOpen ? "Close menu" : "Open social links"}
+                            aria-expanded={menuOpen}
+                            onClick={() => setMenuOpen((o) => !o)}
+                            style={{
+                                ...glassSolid,
+                                width: 42,
+                                height: 42,
+                                borderRadius: 14,
+                                display: "grid",
+                                placeItems: "center",
+                                cursor: "pointer",
+                                color: "rgba(255,255,255,0.92)",
+                            }}
+                        >
+                            {menuOpen ? (
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                    <path d="M18 6L6 18M6 6l12 12" />
+                                </svg>
+                            ) : (
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                    <path d="M3 6h18M3 12h18M3 18h18" />
+                                </svg>
+                            )}
+                        </button>
+                    )}
+
+                    {visible && (
+                        <div style={{ ...glassSolid, borderRadius: 14, padding: 0 }}>
+                            <MailButton onClick={onMailClick} count={selectedSkillsCount} />
+                        </div>
+                    )}
+
+                    {/* Flip button — always visible on mobile */}
                     <button
                         type="button"
-                        aria-label={menuOpen ? "Close menu" : "Open social links"}
-                        aria-expanded={menuOpen}
-                        onClick={() => setMenuOpen((o) => !o)}
+                        onClick={onFlip}
+                        aria-label={isFlipped ? "Show CV" : "Show certificates"}
                         style={{
                             ...glassSolid,
                             width: 42,
@@ -161,28 +197,29 @@ export default function SocialNav({ visible, onMailClick, selectedSkillsCount = 
                             display: "grid",
                             placeItems: "center",
                             cursor: "pointer",
-                            color: "rgba(255,255,255,0.92)",
+                            color: isFlipped ? "rgba(199,210,254,0.95)" : "rgba(255,255,255,0.92)",
                         }}
                     >
-                        {menuOpen ? (
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                                <path d="M18 6L6 18M6 6l12 12" />
+                        {isFlipped ? (
+                            /* Back arrow — return to CV front */
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="3" y="4" width="18" height="16" rx="2" />
+                                <path d="M10 9l-4 3 4 3" />
+                                <path d="M6 12h8" />
                             </svg>
                         ) : (
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                                <path d="M3 6h18M3 12h18M3 18h18" />
+                            /* Forward arrow — flip to certificates */
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="3" y="4" width="18" height="16" rx="2" />
+                                <path d="M14 9l4 3-4 3" />
+                                <path d="M18 12h-8" />
                             </svg>
                         )}
                     </button>
-
-                    {/* Mail always visible */}
-                    <div style={{ ...glassSolid, borderRadius: 14, padding: 0 }}>
-                        <MailButton onClick={onMailClick} count={selectedSkillsCount} />
-                    </div>
                 </div>
 
-                {/* Dropdown */}
-                {menuOpen && (
+                {/* Dropdown — recruiter mode only */}
+                {visible && menuOpen && (
                     <div
                         style={{
                             ...glassSolid,

@@ -206,9 +206,12 @@ export default function CVPanel({ isFlipped, childrenFront, childrenBack, disabl
             style={{
                 width: "min(560px, 90vw)",
                 aspectRatio: "210 / 297",
-                transform,
-                transformStyle: "preserve-3d",
-                transition: dragDisabled ? "transform 180ms ease-out" : (draggingRef.current ? "none" : "transform 180ms ease-out"),
+                // On mobile: no 3D at all — iOS Safari cannot scroll inside preserve-3d
+                ...(dragDisabled ? {} : {
+                    transform,
+                    transformStyle: "preserve-3d",
+                    transition: draggingRef.current ? "none" : "transform 180ms ease-out",
+                }),
                 borderRadius: 8,
                 boxShadow: "var(--shadowHeavy)",
                 position: "relative",
@@ -218,6 +221,8 @@ export default function CVPanel({ isFlipped, childrenFront, childrenBack, disabl
 
                 // When a modal is open, CV is fully inert — NOT when just on mobile (needs touch events for scroll)
                 pointerEvents: disabled ? "none" : "auto",
+                // On mobile: explicitly allow vertical pan so ancestor elements don't block it
+                touchAction: dragDisabled ? "pan-y" : "none",
             }}
             aria-label="CV paper"
         >
@@ -228,15 +233,19 @@ export default function CVPanel({ isFlipped, childrenFront, childrenBack, disabl
                     inset: 0,
                     background: "#ffffff",
                     borderRadius: 8,
-                    backfaceVisibility: "hidden",
                     overflow: "hidden",
+                    // On desktop: flip via 3D backface; on mobile: just show/hide
+                    ...(dragDisabled
+                        ? { display: isFlipped ? "none" : "block" }
+                        : { backfaceVisibility: "hidden", transition: "transform 180ms ease-out" }
+                    ),
                 }}
             >
                 <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: holoStyle.radial }} />
                 <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: holoStyle.sweep, opacity: 0.70 }} />
                 <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: holoStyle.shine, opacity: 0.65 }} />
 
-                <div style={{ position: "relative", height: "100%", padding: 44, overflowY: "auto", boxSizing: "border-box" }}>
+                <div style={{ position: "absolute", inset: 0, padding: 44, overflowY: "auto", boxSizing: "border-box", touchAction: "pan-y", WebkitOverflowScrolling: "touch" }}>
                     {childrenFront}
                 </div>
             </div>
@@ -248,13 +257,16 @@ export default function CVPanel({ isFlipped, childrenFront, childrenBack, disabl
                     inset: 0,
                     background: "#ffffff",
                     borderRadius: 8,
-                    backfaceVisibility: "hidden",
-                    transform: "rotateY(180deg)",
                     overflow: "hidden",
+                    // On desktop: flip via 3D backface; on mobile: just show/hide
+                    ...(dragDisabled
+                        ? { display: isFlipped ? "block" : "none" }
+                        : { backfaceVisibility: "hidden", transform: "rotateY(180deg)" }
+                    ),
                 }}
             >
                 <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: holoStyle.radial, opacity: 0.70 }} />
-                <div style={{ position: "relative", height: "100%", padding: 44, overflowY: "auto", boxSizing: "border-box" }}>
+                <div style={{ position: "relative", height: "100%", padding: 44, overflowY: "auto", boxSizing: "border-box", touchAction: "pan-y", WebkitOverflowScrolling: "touch" }}>
                     {childrenBack}
                 </div>
             </div>
