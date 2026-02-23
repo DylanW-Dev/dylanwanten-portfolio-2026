@@ -5,12 +5,12 @@ export const sections = {
         label: "Personal Info",
         sub: "Contact & Bio",
         content: {
-            name: "Your Name",
-            role: "React Front-End Developer",
-            email: "your.email@example.com",
+            name: "Dylan Wanten",
+            role: ["React Front-End Developer", "Node.js Back-End Developer", "Full-Stack Developer"],
+            email: "dylan.wanten.dev@gmail.com",
             location: "Brussels, Belgium",
-            bio:
-                "I build clean, interactive interfaces with React. I care about usability, accessibility, and UI polish.",
+            availability: "Open to remote opportunities worldwide",
+            bio: "I build clean, interactive interfaces with React. I care about usability, accessibility, and UI polish.",
         },
     },
 
@@ -20,7 +20,10 @@ export const sections = {
         content: {
             items: [
                 { title: "Meta Front-End Developer Professional Certificate", meta: "Coursera • 2025" },
-                { title: "Your Degree / School", meta: "2020 – 2022" },
+                { title: "Google Cybersecurity Professional Certificate", meta: "Coursera • 2025" },
+                { title: "Full-Stack Developer Bootcamp : Dr Angela Yu.", meta: "Udemy • 2023" },
+                { title: "Bachelor in Business Administration / Ku Leuven", meta: "2020 – 2024 (Graduation Pending)" },
+                { title: "High School Diploma, Specialization in Computer Science / Institut Diderot", meta: "2012 – 2017" },
             ],
         },
     },
@@ -30,6 +33,7 @@ export const sections = {
         sub: "Click to explore",
         content: {
             technical: [
+                "HTML",
                 "React",
                 "JavaScript",
                 "TypeScript",
@@ -42,8 +46,59 @@ export const sections = {
                 "Testing (RTL/Jest)",
                 "Tailwind / CSS",
                 "Git",
+                "Debugging",
+                "Unit Testing",
+                "User Interface and User Experience (UI/UX) Design",
+                "User Research",
+                "Web Content Accessibility Guidelines",
+                "User Interface (UI)",
+                "Usability",
+                "Pseudocode",
+                "Software Versioning",
+                "Event-Driven Programming",
+                "User Experience",
+                "User Experience Design",
+                "Software Visualization",
+                "Design Research",
+                "Linux Commands",
+                "Application Programming Interface (API)",
             ],
             soft: ["Communication", "Collaboration", "Problem Solving", "Adaptability"],
+        },
+    },
+
+    Tools: {
+        label: "Tools",
+        sub: "Familiar With",
+        content: {
+            development: [
+                "Postman",
+                "",],
+            databases: [
+                "MongoDB",
+                "MySQL",
+                "PostgreSQL",
+                "SQLite",
+            ],
+            versionControl: [
+                "Git",
+                "GitHub",
+            ],
+            deployment: [
+                "Vercel",
+                "Heroku",
+                "AWS",
+            ],
+            testing: [
+                "Jest",
+                "React Testing Library",
+            ],
+            design_and_analytics: [
+                "Figma (Wireframing & Prototyping)",
+                "Google Analytics",
+                "SEO Tools (Yoast)",
+                "Responsive UI/UX Design",
+            ],
         },
     },
 

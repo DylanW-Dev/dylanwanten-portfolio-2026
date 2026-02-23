@@ -179,13 +179,10 @@ export default function PortfolioLayout() {
                     <div>
                         <div style={{ borderBottom: "1px solid rgba(15,23,42,0.10)", paddingBottom: 18, marginBottom: 22 }}>
                             <div style={{ fontSize: 30, fontWeight: 800, color: "var(--ink)", letterSpacing: "-0.02em" }}>
-                                Your Name
+                                Dylan Wanten
                             </div>
                             <div style={{ marginTop: 6, color: "var(--muted)", fontSize: 14 }}>
-                                React Front-End Developer
-                            </div>
-                            <div style={{ marginTop: 10, fontSize: 12.5, color: "rgba(15,23,42,0.60)" }}>
-                                Drag background to rotate • Click sections to open multiple cards
+                                Full Stack Developer & Cybersecurity Enthusiast
                             </div>
                         </div>
 
@@ -368,6 +365,7 @@ export default function PortfolioLayout() {
                                 <div style={{ fontSize: 14.5, fontWeight: 800, marginBottom: 6 }}>{s.content.name}</div>
                                 <div style={{ color: "rgba(199,210,254,0.90)", marginBottom: 10 }}>{s.content.role}</div>
                                 <div style={{ color: "rgba(226,232,240,0.86)", marginBottom: 12 }}>{s.content.bio}</div>
+                                <div style={{ color: "rgba(226,232,240,0.86)", marginBottom: 12 }}>{s.content.availability}</div>
                                 <div style={{ display: "grid", gap: 8, fontSize: 13 }}>
                                     <div>📧 {s.content.email}</div>
                                     <div>📍 {s.content.location}</div>
