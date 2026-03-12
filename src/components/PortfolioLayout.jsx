@@ -262,7 +262,7 @@ export default function PortfolioLayout() {
                                     style={{
                                         textAlign: "left",
                                         width: "100%",
-                                        borderRadius: 16,
+                                        borderRadius: 14,
                                         border: "1px solid rgba(15,23,42,0.10)",
                                         background: "rgba(255,255,255,0.78)",
                                         padding: "18px 16px",

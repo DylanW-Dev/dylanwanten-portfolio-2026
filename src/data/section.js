@@ -84,9 +84,8 @@ export const sections = {
                 "Git",
                 "GitHub",
             ],
-            deployment: [
-                "Vercel",
-                "Heroku",
+            deployment: [ 
+		"Heroku",
                 "AWS",
             ],
             testing: [
